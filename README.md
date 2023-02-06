@@ -1,6 +1,9 @@
 # SuperKabuki
 SCTE-35 Packet Injection
 
+
+
+
 ```js
 a@debian:~/build/scte35-threefive$ pypy3 superkabuki.py -h
 usage: superkabuki.py [-h] [-i INPUT] [-o OUTPUT] [-s SIDECAR] [-p SCTE35_PID]
@@ -19,3 +22,18 @@ optional arguments:
                         Pid for SCTE-35 packets
   -v, --version         Show version
 ```
+
+
+### Sidecar Files
+load scte35 cues from a Sidecar file.
+
+line format for text file insert_pts, cue
+
+pts is the insert time for the cue, A four second preroll is standard. cue can be base64,hex, int, or bytes
+```js
+a@debian:~/x9k3$ cat sidecar.txt
+
+38103.868589, /DAxAAAAAAAAAP/wFAUAAABdf+/+zHRtOn4Ae6DOAAAAAAAMAQpDVUVJsZ8xMjEqLYemJQ== 
+38199.918911, /DAsAAAAAAAAAP/wDwUAAABef0/+zPACTQAAAAAADAEKQ1VFSbGfMTIxIxGolm0= 
+```
+    
