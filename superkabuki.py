@@ -31,9 +31,10 @@ class SuperKabuki(Stream):
         self.pmt_payload = None
         self.scte35_pid = 0x86
         self.scte35_cc = 0
-        self.iframer = IFramer()
+        self.iframer = IFramer(shush=True)
         self.sidecar = deque()
         self.sidecar_file = "sidecar.txt"
+        self.time_signals = False
 
     def _bump_cc(self):
         self.scte35_cc = (self.scte35_cc + 1) % 16
@@ -53,9 +54,6 @@ class SuperKabuki(Stream):
 
     def encode(self, func=None):
         """
-        Stream.decode_proxy writes all ts packets are written to stdout
-        for piping into another program like mplayer.
-        SCTE-35 cues are printed to stderr.
         """
         if self._find_start():
             with open(self.outfile, "wb") as out_file:
@@ -66,18 +64,18 @@ class SuperKabuki(Stream):
                     self._program_stream_map(pkt, pid)
                     pts = self.iframer.parse(pkt)  # insert on iframe
                     if pts:
+                        if self.time_signals:
+                            out_file.write(self._gen_time_signal(pts))
                         self.load_sidecar(pts)
                         scte35_pkt = self.chk_sidecar_cues(pts)
-                        # out_file.write(self._gen_time_signals(pts))
                         if scte35_pkt:
-                            print("yes")
                             out_file.write(scte35_pkt)
                     if pid in self.pids.pmt:
                         if self.pmt_payload:
                             pkt = pkt[:4] + self.pmt_payload
                     out_file.write(pkt)
 
-    def _gen_time_signals(self, pts):
+    def _gen_time_signal(self, pts):
         cue = Cue()
         cue.command = TimeSignal()
         cue.command.time_specified_flag = True
@@ -110,15 +108,15 @@ class SuperKabuki(Stream):
 
         with reader(self.sidecar_file) as sidefile:
             for line in sidefile:
-                print(line)
                 line = line.decode().strip().split("#", 1)[0]
                 if len(line):
                     insert_pts, cue = line.split(",", 1)
                     insert_pts = float(insert_pts)
-                    if insert_pts == 0.0 and self.args.live:
-                        insert_pts = self.next_start
+                    if insert_pts == 0.0:
+                        insert_pts = pts
                     if insert_pts >= pts:
                         if [insert_pts, cue] not in self.sidecar:
+                            print(insert_pts, cue)
                             self.sidecar.append([insert_pts, cue])
                             self.sidecar = deque(
                                 sorted(self.sidecar, key=itemgetter(0))
@@ -135,10 +133,14 @@ class SuperKabuki(Stream):
         if self.sidecar:
             if (pts - 10) <= float(self.sidecar[0][0]) <= pts:
                 insert_pts, cue_mesg = self.sidecar.popleft()
-                return self.gen_scte35(insert_pts, cue_mesg)
+                return self.mk_scte35_pkt(insert_pts, cue_mesg)
         return False
 
-    def gen_scte35(self, pts, cue_mesg):
+    def mk_scte35_pkt(self, pts, cue_mesg):
+        """
+        Make a SCTE-35 packet,
+        with cue_mesg as the payload.
+        """
         cue = Cue(cue_mesg)
         cue.decode()
         nbin = NBin()
@@ -156,7 +158,7 @@ class SuperKabuki(Stream):
         padding = b"\xff" * pad_size
         nbin.add_bites(padding)
         self._bump_cc()
-        print(nbin.bites)
+        #print(nbin.bites)
         return nbin.bites
 
     def _program_stream_map(self, pkt, pid):
@@ -178,7 +180,7 @@ class SuperKabuki(Stream):
         if not self._section_done(pay, pid, seclen):
             return False
         program_number = self._parse_program(pay[3], pay[4])
-        print("program_number", program_number, pay[3], pay[4])
+        print("program_number", program_number)
         pcr_pid = self._parse_pid(pay[8], pay[9])
         print("pcr_pid", pcr_pid)
         self.pids.pcr.add(pcr_pid)
@@ -244,7 +246,7 @@ class SuperKabuki(Stream):
         start = idx
         while idx < end_idx - 5:
             stream_type, pid, ei_len = self._parse_stream_type(pay, idx)
-            print("Stream: ", stream_type, pid, ei_len)
+            print("Stream: type:", stream_type,"PID:", pid, "EI Len:",ei_len)
             idx += chunk_size
             idx += ei_len
             self.maps.pid_prgm[pid] = program_number
