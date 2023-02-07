@@ -1,6 +1,23 @@
 # SuperKabuki
 SCTE-35 Packet Injection
 
+### Fast Start
+
+* Insert time signal cues at every iframe
+
+```js
+
+python3 -mpip install threefive new_reader iframes
+
+git clone https://github.com/futzu/SuperKabuki
+
+cd SuperKabuki
+
+python3 superkabuki.py -i your_video.ts -o output.ts -t
+
+threefive output.ts
+```
+
 
 ### Requires
 * threefive
@@ -13,9 +30,8 @@ python3 -mpip install threefive new_reader iframes
 ```
 
 ```js
-a@debian:~/build/scte35-threefive$ pypy3 superkabuki.py -h
 usage: superkabuki.py [-h] [-i INPUT] [-o OUTPUT] [-s SIDECAR] [-p SCTE35_PID]
-                      [-v]
+                      [-t] [-v]
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -25,10 +41,13 @@ optional arguments:
   -o OUTPUT, --output OUTPUT
                         Output file
   -s SIDECAR, --sidecar SIDECAR
-                        Sidecar file for SCTE35
+                        Sidecar file for SCTE35 (default sidecar.txt)
   -p SCTE35_PID, --scte35_pid SCTE35_PID
-                        Pid for SCTE-35 packets
+                        Pid for SCTE-35 packets, can be hex or integer.
+                        (default 0x86)
+  -t, --time_signals    Flag to insert Time Signal cues at iframes.
   -v, --version         Show version
+
 ```
 
 
