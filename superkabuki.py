@@ -66,14 +66,23 @@ class SuperKabuki(Stream):
             "-s",
             "--sidecar",
             default="sidecar.txt",
-            help=""" Sidecar file for SCTE35""",
+            help=""" Sidecar file for SCTE35 (default sidecar.txt)""",
         )
         parser.add_argument(
             "-p",
             "--scte35_pid",
-            default=None,
-            help="""Pid for SCTE-35 packets""",
+            default="0x86",
+            help="""Pid for SCTE-35 packets, can be hex or integer. (default 0x86)""",
         )
+
+        parser.add_argument(
+        "-t",
+        "--time_signals",
+        action="store_const",
+        default=False,
+        const=True,
+        help="Flag to insert Time Signal cues at iframes.",
+    )
         parser.add_argument(
             "-v",
             "--version",
@@ -93,6 +102,7 @@ class SuperKabuki(Stream):
             self.sidecar_file = args.sidecar
             self._tsdata = reader(args.input)
             self.con_pid2int(args.scte35_pid)
+            self.time_signals = args.time_signals
         else:
             print(" input file and pid to convert are required. run superkabuki -h")
             sys.exit()
@@ -179,23 +189,24 @@ class SuperKabuki(Stream):
         the sidecar file and loads them into X9K3.sidecar
         if live, blank out the sidecar file after cues are loaded.
         """
-
-        with reader(self.sidecar_file) as sidefile:
-            for line in sidefile:
-                line = line.decode().strip().split("#", 1)[0]
-                if len(line):
-                    insert_pts, cue = line.split(",", 1)
-                    insert_pts = float(insert_pts)
-                    if insert_pts == 0.0:
-                        insert_pts = pts
-                    if insert_pts >= pts:
-                        if [insert_pts, cue] not in self.sidecar:
-                            print(insert_pts, cue)
-                            self.sidecar.append([insert_pts, cue])
-                            self.sidecar = deque(
-                                sorted(self.sidecar, key=itemgetter(0))
-                            )
-
+        try:
+            with reader(self.sidecar_file) as sidefile:
+                for line in sidefile:
+                    line = line.decode().strip().split("#", 1)[0]
+                    if len(line):
+                        insert_pts, cue = line.split(",", 1)
+                        insert_pts = float(insert_pts)
+                        if insert_pts == 0.0:
+                            insert_pts = pts
+                        if insert_pts >= pts:
+                            if [insert_pts, cue] not in self.sidecar:
+                                print(insert_pts, cue)
+                                self.sidecar.append([insert_pts, cue])
+                                self.sidecar = deque(
+                                    sorted(self.sidecar, key=itemgetter(0))
+                                )
+        except:
+            pass
     # with open(self.sidecar_file, "w") as scf:
     #    scf.close()
 
