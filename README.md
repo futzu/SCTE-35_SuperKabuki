@@ -2,7 +2,15 @@
 SCTE-35 Packet Injection
 
 
+### Requires
+* threefive
+* new_reader
+* iframes
 
+```
+python3 -mpip install threefive new_reader iframes
+
+```
 
 ```js
 a@debian:~/build/scte35-threefive$ pypy3 superkabuki.py -h
@@ -29,7 +37,11 @@ load scte35 cues from a Sidecar file.
 
 line format for text file insert_pts, cue
 
-pts is the insert time for the cue, A four second preroll is standard. cue can be base64,hex, int, or bytes
+pts is the insert time for the cue, A four second preroll is standard. cue can be base64,hex, int, or bytes.
+
+The insert_pts has to be valid for the video, meaning if your insert_pts is 38103.868589, the video PTS has to be 
+less than 38103.868589 for the cue to be inserted.
+
 ```js
 a@debian:~/x9k3$ cat sidecar.txt
 
@@ -37,3 +49,7 @@ a@debian:~/x9k3$ cat sidecar.txt
 38199.918911, /DAsAAAAAAAAAP/wDwUAAABef0/+zPACTQAAAAAADAEKQ1VFSbGfMTIxIxGolm0= 
 ```
     
+### Usage 
+```
+python3 superkabuki.py -i input_file -s sidecar.txt -p 0x86
+```
