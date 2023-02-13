@@ -86,6 +86,7 @@ class SuperKabuki(Stream):
             help=""" Input source, like "/home/a/vid.ts"
                                     or "udp://@235.35.3.5:3535"
                                     or "https://futzu.com/xaa.ts"
+                                    (default sys.stdin.buffer)
                                     """,
         )
 
@@ -93,7 +94,7 @@ class SuperKabuki(Stream):
             "-o",
             "--output",
             default=sys.stdout.buffer,
-            help="""Output file """,
+            help="""Output file  (default sys.stdout.buffer)""",
         )
 
         parser.add_argument(
