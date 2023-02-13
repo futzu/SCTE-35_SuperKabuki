@@ -14,6 +14,41 @@ from functools import partial
 from new_reader import reader
 from iframes import IFramer
 
+MAJOR = "0"
+MINOR = "0"
+MAINTAINENCE = "37"
+
+
+def version():
+    """
+    version prints version as a string
+
+    Odd number versions are releases.
+    Even number versions are testing builds between releases.
+
+    Used to set version in setup.py
+    and as an easy way to check which
+    version you have installed.
+
+    """
+    return f"{MAJOR}.{MINOR}.{MAINTAINENCE}"
+
+
+def version_number():
+    """
+    version_number returns version as an int.
+    if version() returns 2.3.01
+    version_number will return 2301
+    """
+    return int(f"{MAJOR}{MINOR}{MAINTAINENCE}")
+
+
+def to_stderr(data):
+    """
+    print to sys.stderr.buffer aka 2
+    """
+    print(data, file=sys.stderr)
+
 
 class SuperKabuki(Stream):
     """
@@ -37,7 +72,6 @@ class SuperKabuki(Stream):
         self.sidecar_file = "sidecar.txt"
         self.time_signals = False
         self._parse_args()
-        print(self.infile)
         super().__init__(self.infile)
 
     def _parse_args(self):
@@ -48,7 +82,7 @@ class SuperKabuki(Stream):
         parser.add_argument(
             "-i",
             "--input",
-            default=None,
+            default=sys.stdin.buffer,
             help=""" Input source, like "/home/a/vid.ts"
                                     or "udp://@235.35.3.5:3535"
                                     or "https://futzu.com/xaa.ts"
@@ -58,7 +92,7 @@ class SuperKabuki(Stream):
         parser.add_argument(
             "-o",
             "--output",
-            default="output.ts",
+            default=sys.stdout.buffer,
             help="""Output file """,
         )
 
@@ -76,13 +110,13 @@ class SuperKabuki(Stream):
         )
 
         parser.add_argument(
-        "-t",
-        "--time_signals",
-        action="store_const",
-        default=False,
-        const=True,
-        help="Flag to insert Time Signal cues at iframes.",
-    )
+            "-t",
+            "--time_signals",
+            action="store_const",
+            default=False,
+            const=True,
+            help="Flag to insert Time Signal cues at iframes.",
+        )
         parser.add_argument(
             "-v",
             "--version",
@@ -104,7 +138,6 @@ class SuperKabuki(Stream):
             self.con_pid2int(args.scte35_pid)
             self.time_signals = args.time_signals
         else:
-            print(" input file and pid to convert are required. run superkabuki -h")
             sys.exit()
 
     def iter_pkts(self):
@@ -115,7 +148,7 @@ class SuperKabuki(Stream):
             self.scte35_pid = int(pid, 16)
         else:
             self.scte35_pid = int(pid)
-        print(self.scte35_pid)
+        to_stderr(f"SCTE-35 PID: {hex(self.scte35_pid)}")
 
     def _bump_cc(self):
         self.scte35_cc = (self.scte35_cc + 1) % 16
@@ -140,7 +173,10 @@ class SuperKabuki(Stream):
         SCTE-35 cues are printed to stderr.
         """
         if self._find_start():
-            with open(self.outfile, "wb") as out_file:
+            to_stderr(f"Writing {self.outfile}")
+            if isinstance(self.outfile, str):
+                self.outfile = open(self.outfile, "wb")
+            with self.outfile as out_file:
                 for pkt in self.iter_pkts():
                     pid = self._parse_info(pkt)
                     if self._pusi_flag(pkt):
@@ -158,6 +194,10 @@ class SuperKabuki(Stream):
                         if self.pmt_payload:
                             pkt = pkt[:4] + self.pmt_payload
                     out_file.write(pkt)
+
+    def proxy(self, func=None):
+        self.outfile = sys.stdout.buffer
+        self.encode(func=func)
 
     def _gen_time_signal(self, pts):
         cue = Cue()
@@ -200,13 +240,14 @@ class SuperKabuki(Stream):
                             insert_pts = pts
                         if insert_pts >= pts:
                             if [insert_pts, cue] not in self.sidecar:
-                                print(insert_pts, cue)
+                                to_stderr(insert_pts, cue)
                                 self.sidecar.append([insert_pts, cue])
                                 self.sidecar = deque(
                                     sorted(self.sidecar, key=itemgetter(0))
                                 )
         except:
             pass
+
     # with open(self.sidecar_file, "w") as scf:
     #    scf.close()
 
@@ -243,14 +284,14 @@ class SuperKabuki(Stream):
         padding = b"\xff" * pad_size
         nbin.add_bites(padding)
         self._bump_cc()
-        #print(nbin.bites)
+        # to_stderr(nbin.bites)
         return nbin.bites
 
     def _program_stream_map(self, pkt, pid):
         pay = self._parse_payload(pkt)
         if pay.startswith(b"\x00\x00\x01\xbc"):
-            print("psm")
-            print(pid, pay)
+            to_stderr("psm")
+            to_stderr(pid, pay)
 
     def _regen_pmt(self, n_seclen, pcr_pid, n_proginfolen, n_info_bites, n_streams):
         nbin = NBin()
@@ -280,7 +321,6 @@ class SuperKabuki(Stream):
             n_payload = pointer_field + n_payload + (b"\xff" * pad)
         self.pmt_payload = n_payload
 
-
     def _program_map_table(self, pay, pid):
         """
         parse program maps for streams
@@ -289,18 +329,18 @@ class SuperKabuki(Stream):
         if not pay:
             return False
         seclen = self._parse_length(pay[1], pay[2])
-        #print("seclen", seclen)
+        # to_stderr("seclen", seclen)
         n_seclen = seclen + 11
         if not self._section_done(pay, pid, seclen):
             return False
         program_number = self._parse_program(pay[3], pay[4])
-        #print("program_number", program_number)
+        # to_stderr("program_number", program_number)
         pcr_pid = self._parse_pid(pay[8], pay[9])
-        #print("pcr_pid", pcr_pid)
+        # to_stderr("pcr_pid", pcr_pid)
         self.pids.pcr.add(pcr_pid)
         self.maps.pid_prgm[pcr_pid] = program_number
         proginfolen = self._parse_length(pay[10], pay[11])
-        #print("pif", proginfolen)
+        # to_stderr("pif", proginfolen)
         idx = 12
         n_proginfolen = proginfolen + len(self.CUEI_DESCRIPTOR)
         end = idx + proginfolen
@@ -313,7 +353,7 @@ class SuperKabuki(Stream):
             idx += 1
             d_bytes = pay[idx - 2 : idx + d_len]
             idx += d_len
-            print(f"type: {d_type} len: { d_len} bytes: {d_bytes}")
+            to_stderr(f"type: {d_type} len: { d_len} bytes: {d_bytes}")
         si_len = seclen - 9
         si_len -= proginfolen
         streams = self._parse_program_streams(si_len, pay, idx, program_number)
@@ -332,7 +372,7 @@ class SuperKabuki(Stream):
         start = idx
         while idx < end_idx - 5:
             stream_type, pid, ei_len = self._parse_stream_type(pay, idx)
-            print("Stream: type:", stream_type,"PID:", pid, "EI Len:",ei_len)
+            # to_stderr("Stream: type:", stream_type,"PID:", pid, "EI Len:",ei_len)
             idx += chunk_size
             idx += ei_len
             self.maps.pid_prgm[pid] = program_number
@@ -362,6 +402,5 @@ class SuperKabuki(Stream):
 
 
 if __name__ == "__main__":
-
     sk = SuperKabuki()
     sk.encode()
