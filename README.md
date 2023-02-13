@@ -30,23 +30,30 @@ python3 -mpip install threefive new_reader iframes
 ```
 
 ```js
-usage: superkabuki.py [-h] [-i INPUT] [-o OUTPUT] [-s SIDECAR] [-p SCTE35_PID]
-                      [-t] [-v]
+a@debian:~/SuperKabuki$ python3 superkabuki.py -h
 
-optional arguments:
+usage: superkabuki.py [-h] [-i INPUT] [-o OUTPUT] [-s SIDECAR] [-p SCTE35_PID] [-t] [-v]
+
+options:
   -h, --help            show this help message and exit
+  
   -i INPUT, --input INPUT
-                        Input source, like "/home/a/vid.ts" or
-                        "udp://@235.35.3.5:3535" or "https://futzu.com/xaa.ts"
+                        Input source, like "/home/a/vid.ts" or "udp://@235.35.3.5:3535" or
+                        "https://futzu.com/xaa.ts" (default sys.stdin.buffer)
+                        
   -o OUTPUT, --output OUTPUT
-                        Output file
+                        Output file (default sys.stdout.buffer)
+                        
   -s SIDECAR, --sidecar SIDECAR
                         Sidecar file for SCTE35 (default sidecar.txt)
+                        
   -p SCTE35_PID, --scte35_pid SCTE35_PID
-                        Pid for SCTE-35 packets, can be hex or integer.
-                        (default 0x86)
+                        Pid for SCTE-35 packets, can be hex or integer. (default 0x86)
+                        
   -t, --time_signals    Flag to insert Time Signal cues at iframes.
+  
   -v, --version         Show version
+
 
 ```
 
