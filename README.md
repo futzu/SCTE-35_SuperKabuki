@@ -1,6 +1,3 @@
- # [PEP 668.... boo hiss! *(throws a tomato)*](https://peps.python.org/pep-0668/)
-
-
 # SuperKabuki
 SCTE-35 Packet Injection
 
