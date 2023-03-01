@@ -5,18 +5,17 @@ Super Kabuki - SCTE-35 Packet injection
 import argparse
 import sys
 from collections import deque
-from operator import itemgetter
-from threefive import Stream, Cue, SpliceNull, TimeSignal
-from threefive.stream import ProgramInfo
-from threefive.crc import crc32
-from bitn import NBin
 from functools import partial
+from operator import itemgetter
+from threefive import Stream, Cue, TimeSignal
+from threefive.crc import crc32
+from threefive.bitn import NBin
 from new_reader import reader
 from iframes import IFramer
 
 MAJOR = "0"
 MINOR = "0"
-MAINTAINENCE = "37"
+MAINTAINENCE = "39"
 
 
 def version():
@@ -106,7 +105,8 @@ class SuperKabuki(Stream):
         parser.add_argument(
             "-p",
             "--scte35_pid",
-            default="0x86",
+            default=0x86,
+            type=int,
             help="""Pid for SCTE-35 packets, can be hex or integer. (default 0x86)""",
         )
 
@@ -136,20 +136,11 @@ class SuperKabuki(Stream):
             self.infile = args.input
             self.sidecar_file = args.sidecar
             self._tsdata = reader(args.input)
-            self.con_pid2int(args.scte35_pid)
+            #self.pid2int(args.scte35_pid)
+            self.scte35_pid = args.scte35_pid
             self.time_signals = args.time_signals
-        else:
-            sys.exit()
-
-    def iter_pkts(self):
-        return iter(partial(self._tsdata.read, self._PACKET_SIZE), b"")
-
-    def con_pid2int(self, pid):
-        if pid.startswith("0x"):
-            self.scte35_pid = int(pid, 16)
-        else:
-            self.scte35_pid = int(pid)
-        to_stderr(f"SCTE-35 PID: {hex(self.scte35_pid)}")
+        #else:
+         #   sys.exit()
 
     def _bump_cc(self):
         self.scte35_cc = (self.scte35_cc + 1) % 16
@@ -167,38 +158,35 @@ class SuperKabuki(Stream):
             scte35_stream = nbin.bites
             return scte35_stream
 
-    def encode(self, func=None):
+    def encode(self):
         """
-        Stream.decode_proxy writes all ts packets are written to stdout
-        for piping into another program like mplayer.
-        SCTE-35 cues are printed to stderr.
-        """
-        if self._find_start():
-            to_stderr(f"Writing {self.outfile}")
-            if isinstance(self.outfile, str):
-                self.outfile = open(self.outfile, "wb")
-            with self.outfile as out_file:
-                for pkt in self.iter_pkts():
-                    pid = self._parse_info(pkt)
-                    if self._pusi_flag(pkt):
-                        self._parse_pts(pkt, pid)
-                    self._program_stream_map(pkt, pid)
-                    pts = self.iframer.parse(pkt)  # insert on iframe
-                    if pts:
-                        if self.time_signals:
-                            out_file.write(self._gen_time_signal(pts))
-                        self.load_sidecar(pts)
-                        scte35_pkt = self.chk_sidecar_cues(pts)
-                        if scte35_pkt:
-                            out_file.write(scte35_pkt)
-                    if pid in self.pids.pmt:
-                        if self.pmt_payload:
-                            pkt = pkt[:4] + self.pmt_payload
-                    out_file.write(pkt)
+        encode parses the video input,
+        adds the SCTE-35 PID to the PMT,
+        parses the sidecar file,
+        and injects SCTE-35 Packets,
 
-    def proxy(self, func=None):
-        self.outfile = sys.stdout.buffer
-        self.encode(func=func)
+        """
+        to_stderr(f"Writing {self.outfile}")
+        if isinstance(self.outfile, str):
+            self.outfile = open(self.outfile, "wb")
+        with self.outfile as out_file:
+            for pkt in self._find_start():
+                pid = self._parse_info(pkt)
+                if self._pusi_flag(pkt):
+                    self._parse_pts(pkt, pid)
+                self._program_stream_map(pkt, pid)
+                pts = self.iframer.parse(pkt)  # insert on iframe
+                if pts:
+                    if self.time_signals:
+                        out_file.write(self._gen_time_signal(pts))
+                    self.load_sidecar(pts)
+                    scte35_pkt = self.chk_sidecar_cues(pts)
+                    if scte35_pkt:
+                        out_file.write(scte35_pkt)
+                if pid in self.pids.pmt:
+                    if self.pmt_payload:
+                        pkt = pkt[:4] + self.pmt_payload
+                out_file.write(pkt)
 
     def _gen_time_signal(self, pts):
         cue = Cue()
@@ -241,7 +229,7 @@ class SuperKabuki(Stream):
                             insert_pts = pts
                         if insert_pts >= pts:
                             if [insert_pts, cue] not in self.sidecar:
-                                to_stderr(insert_pts, cue)
+                                to_stderr((insert_pts, cue))
                                 self.sidecar.append([insert_pts, cue])
                                 self.sidecar = deque(
                                     sorted(self.sidecar, key=itemgetter(0))
@@ -259,11 +247,11 @@ class SuperKabuki(Stream):
         """
         if self.sidecar:
             if (pts - 10) <= float(self.sidecar[0][0]) <= pts:
-                insert_pts, cue_mesg = self.sidecar.popleft()
-                return self.mk_scte35_pkt(insert_pts, cue_mesg)
+                cue_mesg = self.sidecar.popleft()[1]
+                return self.mk_scte35_pkt(cue_mesg)
         return False
 
-    def mk_scte35_pkt(self, pts, cue_mesg):
+    def mk_scte35_pkt(self, cue_mesg):
         """
         Make a SCTE-35 packet,
         with cue_mesg as the payload.
@@ -292,7 +280,7 @@ class SuperKabuki(Stream):
         pay = self._parse_payload(pkt)
         if pay.startswith(b"\x00\x00\x01\xbc"):
             to_stderr("psm")
-            to_stderr(pid, pay)
+            to_stderr((pid, pay))
 
     def _regen_pmt(self, n_seclen, pcr_pid, n_proginfolen, n_info_bites, n_streams):
         nbin = NBin()
@@ -322,7 +310,7 @@ class SuperKabuki(Stream):
             n_payload = pointer_field + n_payload + (b"\xff" * pad)
         self.pmt_payload = n_payload
 
-    def _program_map_table(self, pay, pid):
+    def _parse_pmt(self, pay, pid):
         """
         parse program maps for streams
         """
@@ -331,8 +319,8 @@ class SuperKabuki(Stream):
             return False
         seclen = self._parse_length(pay[1], pay[2])
         # to_stderr("seclen", seclen)
-        n_seclen = seclen + 11
-        if not self._section_done(pay, pid, seclen):
+        n_seclen = seclen + 6
+        if self._section_incomplete(pay, pid, seclen):
             return False
         program_number = self._parse_program(pay[3], pay[4])
         # to_stderr("program_number", program_number)
@@ -371,23 +359,22 @@ class SuperKabuki(Stream):
         chunk_size = 5
         end_idx = (idx + si_len) - 4
         start = idx
-        while idx < end_idx - 5:
+        while idx < end_idx:
             stream_type, pid, ei_len = self._parse_stream_type(pay, idx)
             # to_stderr("Stream: type:", stream_type,"PID:", pid, "EI Len:",ei_len)
             idx += chunk_size
             idx += ei_len
             self.maps.pid_prgm[pid] = program_number
             self._chk_pid_stream_type(pid, stream_type)
-        crc = pay[idx : idx + 4]
+        # crc = pay[idx : idx + 4]
         streams = pay[start:end_idx]
-
         return streams
 
     def _parse_stream_type(self, pay, idx):
         """
         extract stream pid and type
         """
-        npay = pay
+        # npay = pay
         stream_type = pay[idx]
         el_pid = self._parse_pid(pay[idx + 1], pay[idx + 2])
         ei_len = self._parse_length(pay[idx + 3], pay[idx + 4])
