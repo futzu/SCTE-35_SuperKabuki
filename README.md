@@ -1,5 +1,7 @@
 # SuperKabuki
 SCTE-35 Packet Injection
+# SuperKabuki v.0.0.39 is now Released.
+![image](https://user-images.githubusercontent.com/52701496/222034768-b8b1b34c-a645-461c-9408-6fffe2d40d63.png)
 
 ### Fast Start
 
@@ -7,13 +9,9 @@ SCTE-35 Packet Injection
 
 ```js
 
-python3 -mpip install threefive new_reader iframes
+python3 -mpip install superkabuki
 
-git clone https://github.com/futzu/SuperKabuki
-
-cd SuperKabuki
-
-python3 superkabuki.py -i your_video.ts -o output.ts -t
+ superkabuki -i your_video.ts -o output.ts -t
 
 threefive output.ts
 ```
@@ -30,9 +28,9 @@ python3 -mpip install threefive new_reader iframes
 ```
 
 ```js
-a@debian:~/SuperKabuki$ python3 superkabuki.py -h
+a@debian:~/SuperKabuki$ superkabuki -h
 
-usage: superkabuki.py [-h] [-i INPUT] [-o OUTPUT] [-s SIDECAR] [-p SCTE35_PID] [-t] [-v]
+usage: superkabuki [-h] [-i INPUT] [-o OUTPUT] [-s SIDECAR] [-p SCTE35_PID] [-t] [-v]
 
 options:
   -h, --help            show this help message and exit
@@ -77,7 +75,7 @@ a@debian:~/x9k3$ cat sidecar.txt
     
 ### Usage 
 ```
-python3 superkabuki.py -i input_file -s sidecar.txt -p 0x86
+superkabuki -i input_file -s sidecar.txt -p 0x86
 ```
 
 
