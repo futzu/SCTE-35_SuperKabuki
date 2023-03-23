@@ -59,11 +59,11 @@ options:
 ### Sidecar Files
 load scte35 cues from a Sidecar file.
 
-line format for sidecar file insert_pts, cue
+line format for sidecar file __insert_pts, cue__ , like `38103.868589, /DAxAAAAAAAAAP/wFAUAAABdf+/+zHRtOn4Ae6DOAAAAAAAMAQpDVUVJsZ8xMjEqLYemJQ==`
 
-pts is the insert time for the cue, A four second preroll is standard. cue can be base64,hex, int, or bytes.
+pts is the insert time for the cue, cue can be base64,hex, int, or bytes.
 
-The insert_pts has to be valid for the video, meaning if your insert_pts is 38103.868589, the video PTS has to be 
+The __insert_pts has to be valid for the video__, meaning if your insert_pts is 38103.868589, the video PTS has to be 
 less than 38103.868589 for the cue to be inserted.
 
 ```js
@@ -81,12 +81,125 @@ superkabuki -i input_file -s sidecar.txt -p 0x86
 
 
 
-<details> <summary><h2> .</h2> </summary>
+<details> <summary><h2>Cool....but how the hell do I make a SCTE-35 Cue?</h2> </summary>
 
- Phase One: Expose the Pep Deep State
-</h2> </summary>
-  * [Phase One has begun](https://github.com/python/peps/compare/main...futzu:peps:main)
-  
+ * Use threefive.encode helper functions `mk_splice_null` , `mk_splice_insert`, `and mk_time_signal` 
+ 
+```js
+
+>>>> from threefive.encode import mk_splice_null, mk_splice_insert, \
+mk_time_signal
+ 
+>>>> null_cue = mk_splice_null()
+>>>> null_cue.show()
+{
+    "info_section": {
+        "table_id": "0xfc",
+        "section_syntax_indicator": false,
+        "private": false,
+        "sap_type": "0x3",
+        "sap_details": "No Sap Type",
+        "section_length": 17,
+        "protocol_version": 0,
+        "encrypted_packet": false,
+        "encryption_algorithm": 0,
+        "pts_adjustment_ticks": 0,
+        "cw_index": "0x0",
+        "tier": "0xfff",
+        "splice_command_length": 0,
+        "splice_command_type": 0,
+        "descriptor_loop_length": 0,
+        "crc": "0x7a4fbfff"
+    },
+    "command": {
+        "command_length": 0,
+        "command_type": 0,
+        "name": "Splice Null"
+    },
+    "descriptors": []
+}
+```
+ *  Cue as base64
+ ```js
+ >>>> b64null = null_cue.encode()
+>>>> b64null
+'/DARAAAAAAAAAP/wAAAAAHpPv/8='
+ ```
+ * Cue as hex
+ ```js
+>>>> hex_null = null_cue.encode_as_hex()
+>>>> hex_null
+'0xfc301100000000000000fff0000000007a4fbfff'
+```
+ * Cue as int
+ ```js
+>>>> int_null = null_cue.encode_as_int()
+>>>> int_null
+1439737590925997869941740172919141471333225840639
+ ```
+
+ ### help(threefive.encode)
+ ```js
+ 
+NAME
+    threefive.encode - encode.py
+
+DESCRIPTION
+    threefive.encode has helper functions for Cue encoding.
+
+FUNCTIONS
+    mk_splice_insert(event_id, pts=None, duration=None, out=False)
+        mk_cue returns a Cue with a Splice Insert.
+        
+        The args set the SpliceInsert vars.
+        
+        splice_event_id = event_id
+        
+        if pts is None (default):
+            splice_immediate_flag      True
+            time_specified_flag        False
+        
+        if pts:
+            splice_immediate_flag      False
+            time_specified_flag        True
+            pts_time                   pts
+        
+        If duration is None (default)
+            duration_flag              False
+        
+        if duration IS set:
+            out_of_network_indicator   True
+            duration_flag              True
+            break_auto_return          True
+            pts_time                   pts
+        
+        if out is True:
+            out_of_network_indicator   True
+        
+        if out is False (default):
+            out_of_network_indicator   False
+    
+    mk_splice_null()
+        mk_splice_null returns a Cue
+        with a Splice Null
+    
+    mk_time_signal(pts=None)
+         mk_time_signal returns a Cue
+         with a Time Signal
+        
+         if pts is None:
+             time_specified_flag   False
+        
+        if pts IS set:
+             time_specified_flag   True
+             pts_time              pts
+
+FILE
+    /home/a/build/clean/scte35-threefive/threefive/encode.py
+
+```
+ 
+ 
 </details>
 
 
