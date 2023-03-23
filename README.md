@@ -59,7 +59,7 @@ options:
 ### Sidecar Files
 load scte35 cues from a Sidecar file.
 
-line format for text file insert_pts, cue
+line format for sidecar file insert_pts, cue
 
 pts is the insert time for the cue, A four second preroll is standard. cue can be base64,hex, int, or bytes.
 
