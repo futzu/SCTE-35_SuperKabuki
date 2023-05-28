@@ -1,7 +1,6 @@
 # SuperKabuki
 SCTE-35 Packet Injection for MPEGTS.
-# SuperKabuki v.0.0.43 is now Released.
-![image](https://github.com/futzu/SuperKabuki/assets/52701496/953af962-66f4-4572-b8da-977702a39834)
+# SuperKabuki v.0.0.45 is now Released.
 
 
 
