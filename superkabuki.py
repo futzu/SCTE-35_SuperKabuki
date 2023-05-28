@@ -15,7 +15,7 @@ from iframes import IFramer
 
 MAJOR = "0"
 MINOR = "0"
-MAINTAINENCE = "45"
+MAINTAINENCE = "47"
 
 
 def version():
@@ -52,12 +52,12 @@ class SuperKabuki(Stream):
 
     def __init__(self, tsdata=None):
         self.infile = None
-        self.outfile = "outfile.ts"
+        self.outfile = "superkabuki-out.ts"
         if isinstance(tsdata, str):
             self.outfile = f'superkabuki-{tsdata.rsplit("/",1)[1]}'
         super().__init__(tsdata)
         self.pmt_payload = None
-        self.scte35_pid = 0x86
+        self.scte35_pid = None
         self.scte35_cc = 0
         self.iframer = IFramer(shush=True)
         self.sidecar = deque()
@@ -98,8 +98,8 @@ class SuperKabuki(Stream):
         parser.add_argument(
             "-p",
             "--scte35_pid",
-            default="0x86",
-            # type=int,
+            #default=1000,
+            #type=int,
             help="""Pid for SCTE-35 packets, can be hex or integer. (default 0x86)""",
         )
 
@@ -124,7 +124,9 @@ class SuperKabuki(Stream):
         self._apply_args(args)
 
     def _apply_args(self, args):
-        self._args_version(args)
+        """
+        _apply_args applies command line args
+        """
         if args.scte35_pid and args.input:
             self.outfile = args.output
             self.infile = args.input
@@ -132,19 +134,20 @@ class SuperKabuki(Stream):
             self._tsdata = reader(args.input)
             self.pid2int(args.scte35_pid)
             self.time_signals = args.time_signals
-
-    @staticmethod
-    def _args_version(args):
-        if args.version:
-            print(version())
+        else:
+            print2("scte35 pid must be set")
             sys.exit()
 
     def pid2int(self, pid):
+        """
+        pid2int converts a string pid
+        like "0x86" or "1000" to an int.
+        """
         try:
-            self.scte35_pid = int(args.scte35_pid)
+            self.scte35_pid = int(pid)
         except:
             try:
-                self.scte35_pid = int(args.scte35_pid, 16)
+                self.scte35_pid = int(pid, 16)
             except:
                 self.scte35_pid = 0x86
 
@@ -154,14 +157,17 @@ class SuperKabuki(Stream):
     def _pmt_scte35_stream(self):
         if self.scte35_pid:
             nbin = NBin()
-            stream_type = b"\x86"
-            nbin.add_bites(stream_type)
+            stream_type = 0x86
+            nbin.add_int(stream_type,8)
             nbin.add_int(7, 3)  # reserved  0b111
             nbin.add_int(self.scte35_pid, 13)
             nbin.add_int(15, 4)  # reserved 0b1111
             es_info_length = 0
             nbin.add_int(es_info_length, 12)
             scte35_stream = nbin.bites
+            print2("Stream Added:")
+            print2(f"Stream Type: {stream_type} PID: {self.scte35_pid} EI Len:  {es_info_length}")
+
             return scte35_stream
 
     def encode(self):
@@ -330,9 +336,9 @@ class SuperKabuki(Stream):
         if self._section_incomplete(pay, pid, seclen):
             return False
         program_number = self._parse_program(pay[3], pay[4])
-        # print2("program_number", program_number)
+        print2(f"Program Number {program_number}")
         pcr_pid = self._parse_pid(pay[8], pay[9])
-        # print2("pcr_pid", pcr_pid)
+        print2(f"PCR PID {pcr_pid}")
         self.pids.pcr.add(pcr_pid)
         self.maps.pid_prgm[pcr_pid] = program_number
         proginfolen = self._parse_length(pay[10], pay[11])
@@ -341,6 +347,7 @@ class SuperKabuki(Stream):
         end = idx + proginfolen
         info_bites = pay[idx:end]
         n_info_bites = info_bites + self.CUEI_DESCRIPTOR
+        print2(f"Registration Descriptor added {self.CUEI_DESCRIPTOR}")
         while idx < end:
             d_type = pay[idx]
             idx += 1
@@ -365,9 +372,10 @@ class SuperKabuki(Stream):
         chunk_size = 5
         end_idx = (idx + si_len) - 4
         start = idx
+        print2("Streams Found:")
         while idx < end_idx:
             stream_type, pid, ei_len = self._parse_stream_type(pay, idx)
-            print2(("Stream: type:", stream_type, "PID:", pid, "EI Len:", ei_len))
+            print2(f"Stream Type: {stream_type}  PID: { pid}  EI Len:  {ei_len}")
             idx += chunk_size
             idx += ei_len
             self.maps.pid_prgm[pid] = program_number
