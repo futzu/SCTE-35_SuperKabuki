@@ -5,7 +5,6 @@ Super Kabuki - SCTE-35 Packet injection
 import argparse
 import sys
 from collections import deque
-from functools import partial
 from operator import itemgetter
 from threefive import Stream, Cue, TimeSignal, print2
 from threefive.crc import crc32
@@ -15,7 +14,7 @@ from iframes import IFramer
 
 MAJOR = "0"
 MINOR = "0"
-MAINTAINENCE = "47"
+MAINTAINENCE = "49"
 
 
 def version():
@@ -127,6 +126,7 @@ class SuperKabuki(Stream):
         """
         _apply_args applies command line args
         """
+        self._args_version(args)
         if args.scte35_pid and args.input:
             self.outfile = args.output
             self.infile = args.input
@@ -136,6 +136,12 @@ class SuperKabuki(Stream):
             self.time_signals = args.time_signals
         else:
             print2("scte35 pid must be set")
+            sys.exit()
+
+    @staticmethod
+    def _args_version(args):
+        if args.version:
+            print(version())
             sys.exit()
 
     def pid2int(self, pid):
