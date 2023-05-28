@@ -15,7 +15,7 @@ from iframes import IFramer
 
 MAJOR = "0"
 MINOR = "0"
-MAINTAINENCE = "43"
+MAINTAINENCE = "45"
 
 
 def version():
@@ -124,6 +124,7 @@ class SuperKabuki(Stream):
         self._apply_args(args)
 
     def _apply_args(self, args):
+        self._args_version(args)
         if args.scte35_pid and args.input:
             self.outfile = args.output
             self.infile = args.input
@@ -131,6 +132,12 @@ class SuperKabuki(Stream):
             self._tsdata = reader(args.input)
             self.pid2int(args.scte35_pid)
             self.time_signals = args.time_signals
+
+    @staticmethod
+    def _args_version(args):
+        if args.version:
+            print(version())
+            sys.exit()
 
     def pid2int(self, pid):
         try:
