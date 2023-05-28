@@ -86,8 +86,7 @@ superkabuki -i input_file -s sidecar.txt -p 0x86
  
 ```js
 
->>>> from threefive.encode import mk_splice_null, mk_splice_insert, \
-mk_time_signal
+>>>> from threefive.encode import mk_splice_null, mk_splice_insert, mk_time_signal
  
 >>>> null_cue = mk_splice_null()
 >>>> null_cue.show()
