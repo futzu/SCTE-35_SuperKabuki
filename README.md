@@ -154,16 +154,16 @@ FUNCTIONS
         
         splice_event_id = event_id
         
-        if pts is None (default):
+        if pts IS None (default):
             splice_immediate_flag      True
             time_specified_flag        False
         
-        if pts:
+        if pts IS set:
             splice_immediate_flag      False
             time_specified_flag        True
             pts_time                   pts
         
-        If duration is None (default)
+        If duration IS None (default)
             duration_flag              False
         
         if duration IS set:
@@ -172,10 +172,10 @@ FUNCTIONS
             break_auto_return          True
             pts_time                   pts
         
-        if out is True:
+        if out IS True:
             out_of_network_indicator   True
         
-        if out is False (default):
+        if out IS False (default):
             out_of_network_indicator   False
     
     mk_splice_null()
@@ -186,7 +186,7 @@ FUNCTIONS
          mk_time_signal returns a Cue
          with a Time Signal
         
-         if pts is None:
+         if pts IS None:
              time_specified_flag   False
         
         if pts IS set:
