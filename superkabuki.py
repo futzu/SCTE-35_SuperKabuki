@@ -14,7 +14,7 @@ from iframes import IFramer
 
 MAJOR = "0"
 MINOR = "0"
-MAINTAINENCE = "49"
+MAINTAINENCE = "51"
 
 
 def version():
@@ -46,8 +46,13 @@ class SuperKabuki(Stream):
     Super Kabuki - SCTE-35 Packet injection
 
     """
-
-    CUEI_DESCRIPTOR = b"\x05\x04CUEI"
+    _PACKET_SIZE = 188
+    _SYNC_BYTE = 0x47
+    # tids
+    _PMT_TID = b"\x02"
+    _SCTE35_TID = b"\xFC"
+    _SDT_TID = b"\x42"
+    _CUEI_DESCRIPTOR = b"\x05\x04CUEI"
 
     def __init__(self, tsdata=None):
         self.infile = None
@@ -188,7 +193,9 @@ class SuperKabuki(Stream):
         if isinstance(self.outfile, str):
             self.outfile = open(self.outfile, "wb")
         with self.outfile as out_file:
-            for pkt in self._find_start():
+            if not self._find_start():
+                return
+            for pkt in self.iter_pkts():
                 pid = self._parse_info(pkt)
                 if self._pusi_flag(pkt):
                     self._parse_pts(pkt, pid)
