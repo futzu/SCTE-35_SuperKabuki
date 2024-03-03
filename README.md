@@ -1,9 +1,10 @@
 # SuperKabuki
 SCTE-35 Packet Injection for MPEGTS.
 # SuperKabuki v.0.0.51 released march 3 2024
-* find_start bug fix
 
-<details> <summary><h1>Fast Start</h1> </summary>
+
+
+<details> <summary>Fast Start </summary>
 
 * Install SuperKabuki
 ```js
@@ -51,7 +52,7 @@ options:
 ```
 </details>
 
-<details> <summary><h1>Sidecar Files?</h1> </summary>
+<details> <summary>Sidecar Files?</summary>
  
 Load scte35 cues from a Sidecar file.
  
@@ -79,7 +80,7 @@ superkabuki -i input_file -s sidecar.txt -p 0x86
 </details>
 
  
- <details> <summary><h3>Easy SCTE-35 Cue Encoding.</h3> </summary>  
+ <details> <summary>Easy SCTE-35 Cue Encoding. </summary>  
  
  
  #### Use threefive.encode helper functions `mk_splice_null` , `mk_splice_insert`, `and mk_time_signal` 
@@ -201,7 +202,7 @@ FILE
  </details>
 
  
- <details> <summary><h3>Advanced SCTE-35 Cue Encoding.</h3> </summary>  
+ <details> <summary>Advanced SCTE-35 Cue Encoding. </summary>  
 
 
 * [SCTE35 Cue with a Time Signal Command in Seven Steps](https://github.com/futzu/scte35-threefive/blob/master/Encoding.md#scte35-cue-with-a-time-signal-command-in-seven-steps) 
