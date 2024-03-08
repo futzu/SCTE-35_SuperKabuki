@@ -14,7 +14,7 @@ from iframes import IFramer
 
 MAJOR = "0"
 MINOR = "0"
-MAINTAINENCE = "51"
+MAINTAINENCE = "53"
 
 
 def version():
@@ -46,13 +46,8 @@ class SuperKabuki(Stream):
     Super Kabuki - SCTE-35 Packet injection
 
     """
-    _PACKET_SIZE = 188
-    _SYNC_BYTE = 0x47
-    # tids
-    _PMT_TID = b"\x02"
-    _SCTE35_TID = b"\xFC"
-    _SDT_TID = b"\x42"
-    _CUEI_DESCRIPTOR = b"\x05\x04CUEI"
+
+    CUEI_DESCRIPTOR = b"\x05\x04CUEI"
 
     def __init__(self, tsdata=None):
         self.infile = None
@@ -102,8 +97,8 @@ class SuperKabuki(Stream):
         parser.add_argument(
             "-p",
             "--scte35_pid",
-            #default=1000,
-            #type=int,
+            default=0x86,
+            type=int,
             help="""Pid for SCTE-35 packets, can be hex or integer. (default 0x86)""",
         )
 
@@ -173,7 +168,7 @@ class SuperKabuki(Stream):
             nbin.add_int(7, 3)  # reserved  0b111
             nbin.add_int(self.scte35_pid, 13)
             nbin.add_int(15, 4)  # reserved 0b1111
-            es_info_length = 0
+            es_info_length = 3
             nbin.add_int(es_info_length, 12)
             scte35_stream = nbin.bites
             print2("Stream Added:")
@@ -254,7 +249,6 @@ class SuperKabuki(Stream):
                             insert_pts = pts
                         if insert_pts >= pts:
                             if [insert_pts, cue] not in self.sidecar:
-                                print2((insert_pts, cue))
                                 self.sidecar.append([insert_pts, cue])
                                 self.sidecar = deque(
                                     sorted(self.sidecar, key=itemgetter(0))
@@ -298,7 +292,6 @@ class SuperKabuki(Stream):
         padding = b"\xff" * pad_size
         nbin.add_bites(padding)
         self._bump_cc()
-        # print2(nbin.bites)
         return nbin.bites
 
     def _program_stream_map(self, pkt, pid):
@@ -340,7 +333,7 @@ class SuperKabuki(Stream):
         """
         parse program maps for streams
         """
-        pay = self._chk_partial(pay, pid, self._PMT_TID)
+        pay = self._chk_partial(pay, pid, self.PMT_TID)
         if not pay:
             return False
         seclen = self._parse_length(pay[1], pay[2])
@@ -372,7 +365,9 @@ class SuperKabuki(Stream):
         si_len = n_seclen - 9
         si_len -= proginfolen
         streams = self._parse_program_streams(si_len, pay, idx, program_number)
-        n_streams = self._pmt_scte35_stream() + streams
+       # print2(streams)
+        n_streams = streams+self._pmt_scte35_stream()
+       # print2(n_streams)
         self._regen_pmt(pcr_pid, n_info_bites, n_streams)
         return True
 
