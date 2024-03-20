@@ -14,7 +14,7 @@ from iframes import IFramer
 
 MAJOR = "0"
 MINOR = "0"
-MAINTAINENCE = "53"
+MAINTAINENCE = "55"
 
 
 def version():
@@ -46,9 +46,14 @@ class SuperKabuki(Stream):
     Super Kabuki - SCTE-35 Packet injection
 
     """
-
+    _PACKET_SIZE = 188
+    _SYNC_BYTE = 0x47
+    # tids
+    PMT_TID = b"\x02"
+    SCTE35_TID = b"\xFC"
+    _SDT_TID = b"\x42"
     CUEI_DESCRIPTOR = b"\x05\x04CUEI"
-
+    
     def __init__(self, tsdata=None):
         self.infile = None
         self.outfile = "superkabuki-out.ts"
@@ -97,8 +102,8 @@ class SuperKabuki(Stream):
         parser.add_argument(
             "-p",
             "--scte35_pid",
-            default=0x86,
-            type=int,
+            #default=0x86,
+            #type=int,
             help="""Pid for SCTE-35 packets, can be hex or integer. (default 0x86)""",
         )
 
