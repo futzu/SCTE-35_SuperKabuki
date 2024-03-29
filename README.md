@@ -77,7 +77,8 @@ superkabuki -i input_file -s sidecar.txt -p 0x86
 ```
  
 ## Encoding SCTE-35 Cues
+ * [ Two Step SCTE-35 Encoding for MPEGTS](https://github.com/futzu/threefive/blob/master/EasyEncode.md) 
+
  * [Encoding](https://github.com/futzu/scte35parser-threefive/blob/master/Encoding.md)
  * [Encoding | more ](https://github.com/futzu/scte35parser-threefive/blob/master/EncodingPipeMore.md)
- * [ two step SCTE-35 Encoding for MPEGTS](https://github.com/futzu/threefive/blob/master/EasyEncode.md) (link is fixed)
 
