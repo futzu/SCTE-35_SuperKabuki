@@ -15,7 +15,10 @@ from iframes import IFramer
 
 MAJOR = "0"
 MINOR = "0"
-MAINTAINENCE = "57"
+MAINTAINENCE = "59"
+
+REV = "\033[7m"
+NORM = "\033[27m"
 
 
 def version():
@@ -53,7 +56,6 @@ class SuperKabuki(Stream):
     # tids
     PMT_TID = b"\x02"
     SCTE35_TID = b"\xFC"
-  #  _SDT_TID = b"\x42"
     CUEI_DESCRIPTOR = b"\x05\x04CUEI"
 
     def __init__(self, tsdata=None):
@@ -82,10 +84,10 @@ class SuperKabuki(Stream):
             "-i",
             "--input",
             default=sys.stdin.buffer,
-            help=""" Input source, like "/home/a/vid.ts"
+            help=f""" Input source, like "/home/a/vid.ts"
                                     or "udp://@235.35.3.5:3535"
                                     or "https://futzu.com/xaa.ts"
-                                    (default sys.stdin.buffer)
+                                    [ default:{REV}sys.stdin.buffer{NORM} ]
                                     """,
         )
 
@@ -93,23 +95,22 @@ class SuperKabuki(Stream):
             "-o",
             "--output",
             default=sys.stdout.buffer,
-            help="""Output file  (default sys.stdout.buffer)""",
+            help=f"Output file  [ default:{REV}sys.stdout.buffer{NORM} ]",
         )
 
         parser.add_argument(
             "-s",
             "--sidecar",
             default="sidecar.txt",
-            help=""" Sidecar file for SCTE35 (default sidecar.txt)""",
+            help=f"Sidecar file for SCTE35 [ default:{REV}sidecar.txt{NORM} ]",
         )
         parser.add_argument(
             "-p",
             "--scte35_pid",
-            # default=0x86,
-            # type=int,
-            help="""Pid for SCTE-35 packets, can be hex or integer. (default 0x86)""",
+            default="0x86",
+            #type=int,
+            help=f"Pid for SCTE-35 packets [ default:{REV}0x86{NORM} ]",
         )
-
         parser.add_argument(
             "-t",
             "--time_signals",
@@ -135,16 +136,12 @@ class SuperKabuki(Stream):
         _apply_args applies command line args
         """
         self._args_version(args)
-        if args.scte35_pid and args.input:
-            self.outfile = args.output
-            self.infile = args.input
-            self.sidecar_file = args.sidecar
-            self._tsdata = reader(args.input)
-            self.pid2int(args.scte35_pid)
-            self.time_signals = args.time_signals
-        else:
-            print2("SCTE-35 PID must be set.")
-            sys.exit()
+        self.outfile = args.output
+        self.infile = args.input
+        self.sidecar_file = args.sidecar
+        self._tsdata = reader(args.input)
+        self.pid2int(args.scte35_pid)
+        self.time_signals = args.time_signals
 
     @staticmethod
     def _args_version(args):
@@ -176,7 +173,7 @@ class SuperKabuki(Stream):
             nbin.add_int(7, 3)  # reserved  0b111
             nbin.add_int(self.scte35_pid, 13)
             nbin.add_int(15, 4)  # reserved 0b1111
-            es_info_length = 3
+            es_info_length = 0
             nbin.add_int(es_info_length, 12)
             scte35_stream = nbin.bites
             print2("\nAdded Stream:")
@@ -233,7 +230,6 @@ class SuperKabuki(Stream):
                         pkt = self.pmt_header + self.pmt_payload
                         pad_size = 188 - len(pkt)
                         pkt = pkt + (pad * pad_size)
-
                 out_file.write(pkt)
 
     def _gen_time_signal(self, pts):
@@ -283,9 +279,6 @@ class SuperKabuki(Stream):
                                 )
         except:
             pass
-
-    # with open(self.sidecar_file, "w") as scf:
-    #    scf.close()
 
     def chk_sidecar_cues(self, pts):
         """
@@ -341,7 +334,7 @@ class SuperKabuki(Stream):
         nbin.add_int(3, 2)  # reserved                          18
         nbin.add_int(0, 5)  # version                           23
         nbin.add_int(1, 1)  # current_next_indicator            24
-        nbin.add_int(1, 8)  # section number                    32
+        nbin.add_int(0, 8)  # section number                    32
         nbin.add_int(0, 8)  # last section number               40
         nbin.add_int(7, 3)  # res                               43
         nbin.add_int(pcr_pid, 13)  #                            56
@@ -352,7 +345,6 @@ class SuperKabuki(Stream):
         a_crc = crc32(nbin.bites)
         nbin.add_int(a_crc, 32)
         n_payload = nbin.bites
-        #  pad = 187 - (len(n_payload))# + 4)
         pointer_field = b"\x00"
         self.pmt_payload = pointer_field + n_payload
 
@@ -382,11 +374,11 @@ class SuperKabuki(Stream):
         n_info_bites = info_bites + self.CUEI_DESCRIPTOR
         print2(f"\nAdded Registration Descriptor:\n\t{self.CUEI_DESCRIPTOR}")
         while idx < end:
-          #  d_type = pay[idx]
+            #  d_type = pay[idx]
             idx += 1
             d_len = pay[idx]
             idx += 1
-           # d_bytes = pay[idx - 2 : idx + d_len]
+            # d_bytes = pay[idx - 2 : idx + d_len]
             idx += d_len
         si_len = n_seclen - 9
         si_len -= proginfolen
@@ -434,5 +426,5 @@ class SuperKabuki(Stream):
 
 
 if __name__ == "__main__":
-    sk = SuperKabuki()
-    sk.encode()
+    supak = SuperKabuki()
+    supak.encode()
