@@ -1,6 +1,9 @@
 # SuperKabuki
 SCTE-35 Packet Injection for MPEGTS.
-#### Latest is `v.0.0.59` Released `Fri Mar 29 07:27:51 AM EDT 2024`
+#### Latest Version is `v.0.0.59` Released `Fri Mar 29 07:27:51 AM EDT 2024`
+
+
+# _`I just tried v0.0.59, it is awesome!`_ ~Avencheng
 
 
 
