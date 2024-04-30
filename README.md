@@ -1,3 +1,8 @@
+`Heads Up`    I have applied to join the [SCTE Digital Video Subcommittee](https://www.scte.org/information-page-index/digital-video-subcommittee-dvs/)  _If someone asks you about me, say something nice._ 
+
+
+
+
 # SuperKabuki
 SCTE-35 Packet Injection for MPEGTS.
 #### Latest Version is `v.0.0.59` Released `Fri Mar 29 07:27:51 AM EDT 2024`
