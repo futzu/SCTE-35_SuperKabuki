@@ -15,7 +15,7 @@ from iframes import IFramer
 
 MAJOR = "0"
 MINOR = "0"
-MAINTAINENCE = "59"
+MAINTAINENCE = "61"
 
 REV = "\033[7m"
 NORM = "\033[27m"
@@ -57,7 +57,7 @@ class SuperKabuki(Stream):
     PMT_TID = b"\x02"
     SCTE35_TID = b"\xFC"
     CUEI_DESCRIPTOR = b"\x05\x04CUEI"
-
+    ES_INFO_DESCRIPTOR= b"\x8a\x03\x01" # No SCTE-35 Restrictions.
     def __init__(self, tsdata=None):
         self.infile = None
         self.outfile = "superkabuki-out.ts"
@@ -166,22 +166,23 @@ class SuperKabuki(Stream):
         self.scte35_cc = (self.scte35_cc + 1) % 16
 
     def _pmt_scte35_stream(self):
-        if self.scte35_pid:
-            nbin = NBin()
-            stream_type = 0x86
-            nbin.add_int(stream_type, 8)
-            nbin.add_int(7, 3)  # reserved  0b111
-            nbin.add_int(self.scte35_pid, 13)
-            nbin.add_int(15, 4)  # reserved 0b1111
-            es_info_length = 0
-            nbin.add_int(es_info_length, 12)
-            scte35_stream = nbin.bites
-            print2("\nAdded Stream:")
-            print2(
-                f"\tStream Type: {stream_type} PID: {self.scte35_pid} EI Len:  {es_info_length}"
-            )
+        nbin = NBin()
+        stream_type = 0x86
+        nbin.add_int(stream_type, 8)
+        nbin.add_int(7, 3)  # reserved  0b111
+        nbin.add_int(self.scte35_pid, 13)
+        nbin.add_int(15, 4)  # reserved 0b1111
+        es_info_length = len(ES_INFO_DESCRIPTOR)
+        nbin.add_int(es_info_length, 12)
+        # cue_identifier_descriptor for es info
+        nbin.add_bites(ES_INFO_DESCRIPTOR)
+        scte35_stream = nbin.bites
+        print2("\nAdded Stream:")
+        print2(
+            f"\tStream Type: {stream_type} PID: {self.scte35_pid} EI Len:  {es_info_length}"
+        )
 
-            return scte35_stream
+        return scte35_stream
 
     def _parse_pmt_header(self, pkt):
         """
@@ -219,10 +220,11 @@ class SuperKabuki(Stream):
                 if pts:
                     if self.time_signals:
                         out_file.write(self._gen_time_signal(pts))
-                    self.load_sidecar(pts)
-                    scte35_pkt = self.chk_sidecar_cues(pts)
-                    if scte35_pkt:
-                        out_file.write(scte35_pkt)
+                    else:
+                        self.load_sidecar(pts)
+                        scte35_pkt = self.chk_sidecar_cues(pts)
+                        if scte35_pkt:
+                            out_file.write(scte35_pkt)
                 if pid in self.pids.pmt:
                     pad = b"\xff"
                     self._parse_pmt_header(pkt)
