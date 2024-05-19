@@ -15,7 +15,7 @@ from iframes import IFramer
 
 MAJOR = "0"
 MINOR = "0"
-MAINTAINENCE = "61"
+MAINTAINENCE = "62"
 
 REV = "\033[7m"
 NORM = "\033[27m"
@@ -57,7 +57,7 @@ class SuperKabuki(Stream):
     PMT_TID = b"\x02"
     SCTE35_TID = b"\xFC"
     CUEI_DESCRIPTOR = b"\x05\x04CUEI"
-    ES_INFO_DESCRIPTOR= b"\x8a\x03\x01" # No SCTE-35 Restrictions.
+
     def __init__(self, tsdata=None):
         self.infile = None
         self.outfile = "superkabuki-out.ts"
@@ -166,23 +166,22 @@ class SuperKabuki(Stream):
         self.scte35_cc = (self.scte35_cc + 1) % 16
 
     def _pmt_scte35_stream(self):
-        nbin = NBin()
-        stream_type = 0x86
-        nbin.add_int(stream_type, 8)
-        nbin.add_int(7, 3)  # reserved  0b111
-        nbin.add_int(self.scte35_pid, 13)
-        nbin.add_int(15, 4)  # reserved 0b1111
-        es_info_length = len(ES_INFO_DESCRIPTOR)
-        nbin.add_int(es_info_length, 12)
-        # cue_identifier_descriptor for es info
-        nbin.add_bites(ES_INFO_DESCRIPTOR)
-        scte35_stream = nbin.bites
-        print2("\nAdded Stream:")
-        print2(
-            f"\tStream Type: {stream_type} PID: {self.scte35_pid} EI Len:  {es_info_length}"
-        )
+        if self.scte35_pid:
+            nbin = NBin()
+            stream_type = 0x86
+            nbin.add_int(stream_type, 8)
+            nbin.add_int(7, 3)  # reserved  0b111
+            nbin.add_int(self.scte35_pid, 13)
+            nbin.add_int(15, 4)  # reserved 0b1111
+            es_info_length = 0
+            nbin.add_int(es_info_length, 12)
+            scte35_stream = nbin.bites
+            print2("\nAdded Stream:")
+            print2(
+                f"\tStream Type: {stream_type} PID: {self.scte35_pid} EI Len:  {es_info_length}"
+            )
 
-        return scte35_stream
+            return scte35_stream
 
     def _parse_pmt_header(self, pkt):
         """
@@ -195,6 +194,48 @@ class SuperKabuki(Stream):
             head_size += afl + 1  # +1 for afl byte
         self.pmt_header = pkt[:head_size]
 
+    def open_output(self):
+        print2(f"\nOutput File:\t{self.outfile}")
+        if isinstance(self.outfile, str):
+            self.outfile = open(self.outfile, "wb")
+
+    def pad_pkt(self,pkt):
+        pad = b"\xff"
+        self._parse_pmt_header(pkt)
+        if self.pmt_payload is not None:
+            pkt = self.pmt_header + self.pmt_payload
+            pad_size = 188 - len(pkt)
+            pkt = pkt + (pad * pad_size)
+        return pkt
+
+    def auto_time_signals(self,pts,outfile):
+        """
+        auto_time_signals auto add
+        timesignals for every iframe.
+        """
+        if self.time_signals:
+            outfile.write(self._gen_time_signal(pts))
+
+    def add_scte35_pkt(self,pts,out_file):
+        """
+        add_scte35_pkt
+        """
+        scte35_pkt = self.chk_sidecar_cues(pts)
+        if scte35_pkt:
+            out_file.write(scte35_pkt)
+
+    def parse_pkt(self,pkt):
+        """
+        parse_pkt parse a packet
+        """
+        pid = self._parse_info(pkt)
+        if self._pusi_flag(pkt):
+            self._parse_pts(pkt, pid)
+        self._program_stream_map(pkt, pid)
+        if pid in self.pids.pmt:
+            pkt = self.pad_pkt(pkt)
+        return pkt
+
     def encode(self):
         """
         encode parses the video input,
@@ -203,36 +244,17 @@ class SuperKabuki(Stream):
         and injects SCTE-35 Packets,
 
         """
-        print2(f"\nOutput File:\t{self.outfile}")
-        if isinstance(self.outfile, str):
-            self.outfile = open(self.outfile, "wb")
-        with self.outfile as out_file:
+        self.open_output()
+        with self.outfile as outfile:
             if not self._find_start():
                 return
-            pkt_count = 0
             for pkt in self.iter_pkts():
-                pkt_count += 1
-                pid = self._parse_info(pkt)
-                if self._pusi_flag(pkt):
-                    self._parse_pts(pkt, pid)
-                self._program_stream_map(pkt, pid)
                 pts = self.iframer.parse(pkt)  # insert on iframe
                 if pts:
-                    if self.time_signals:
-                        out_file.write(self._gen_time_signal(pts))
-                    else:
-                        self.load_sidecar(pts)
-                        scte35_pkt = self.chk_sidecar_cues(pts)
-                        if scte35_pkt:
-                            out_file.write(scte35_pkt)
-                if pid in self.pids.pmt:
-                    pad = b"\xff"
-                    self._parse_pmt_header(pkt)
-                    if self.pmt_payload is not None:
-                        pkt = self.pmt_header + self.pmt_payload
-                        pad_size = 188 - len(pkt)
-                        pkt = pkt + (pad * pad_size)
-                out_file.write(pkt)
+                    self.auto_time_signals(pts,outfile)
+                    self.load_sidecar(pts)
+                    self.add_scte35_pkt(pts,outfile)
+                outfile.write(self.parse_pkt(pkt))
 
     def _gen_time_signal(self, pts):
         cue = Cue()
