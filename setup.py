@@ -11,7 +11,7 @@ setuptools.setup(
     version=superkabuki.version(),
     author="Adrian of Doom",
     author_email="spam@iodisco.com",
-    description="superkabuki is SCTE-35 Packet injection for the people",
+    description="superkabuki is SCTE-35 Packet injection for mpegts streams",
     long_description=readme,
     long_description_content_type="text/markdown",
     url="https://github.com/futzu/superkabuki",
@@ -19,7 +19,7 @@ setuptools.setup(
     scripts=["bin/superkabuki"],
     platforms="all",
     install_requires=[
-        "threefive >= 2.4.35",
+        "threefive >= 2.4.39",
         "new_reader >= 0.1.9",
         "iframes >= 0.0.7",
     ],
