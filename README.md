@@ -6,12 +6,7 @@
 # SCTE-35 Inserter
 # SCTE-35 Ad Insertion 
 # SCTE-35 Packet Injection for MPEGTS.
-#### Latest Version is `v.0.0.59` Released `Fri Mar 29 07:27:51 AM EDT 2024`
-
-
-# _`I just tried v0.0.59, it is awesome!`_ ~Avencheng
-
-
+#### Latest Version is `v.0.0.63` Released `Wed Jun  5 08:50:29 PM EDT 2024`
 
 
 
