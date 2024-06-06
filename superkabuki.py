@@ -15,7 +15,7 @@ from iframes import IFramer
 
 MAJOR = "0"
 MINOR = "0"
-MAINTAINENCE = "62"
+MAINTAINENCE = "63"
 
 REV = "\033[7m"
 NORM = "\033[27m"
@@ -191,6 +191,7 @@ class SuperKabuki(Stream):
         head_size = 4
         if self._afc_flag(pkt[3]):
             afl = pkt[4]
+            pkt = pkt[:5] + self._unpad(pkt[5:])
             head_size += afl + 1  # +1 for afl byte
         self.pmt_header = pkt[:head_size]
 
