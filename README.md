@@ -15,6 +15,18 @@
 
 python3 -mpip install superkabuki
 ```
+## Heads up! upgrade threefive to  `2`.`4`.`55`
+```js
+python3 -mpip install --upgrade threefive
+```
+* and / or 
+```js
+pypy3 -mpip install --upgrade threefive
+```
+
+
+
+
 ## Cli Options
 ```js
 a@debian:~/SuperKabuki$ superkabuki -h
